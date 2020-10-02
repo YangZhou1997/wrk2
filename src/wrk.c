@@ -18,6 +18,7 @@ static struct config {
     uint64_t rate;
     uint64_t delay_ms;
     bool     latency;
+    bool     no_keepalive;
     bool     u_latency;
     bool     dynamic;
     bool     record_all_responses;
@@ -58,6 +59,7 @@ static void usage() {
            "                                                      \n"
            "    -s, --script      <S>  Load Lua script file       \n"
            "    -H, --header      <H>  Add header to request      \n"
+           "        --no-keepalive     Don't keep connection alive\n"
            "    -L  --latency          Print latency statistics   \n"
            "    -U  --u_latency        Print uncorrected latency statistics\n"
            "        --timeout     <T>  Socket/request timeout     \n"
@@ -559,7 +561,7 @@ static int response_complete(http_parser *parser) {
     }
 
 
-    if (!http_should_keep_alive(parser)) {
+    if (cfg.no_keepalive || !http_should_keep_alive(parser)) {
         reconnect_socket(thread, c);
         goto done;
     }
@@ -698,6 +700,7 @@ static struct option longopts[] = {
     { "script",         required_argument, NULL, 's' },
     { "header",         required_argument, NULL, 'H' },
     { "latency",        no_argument,       NULL, 'L' },
+    { "no-keepalive",   no_argument,       NULL, 'N' },
     { "u_latency",      no_argument,       NULL, 'U' },
     { "batch_latency",  no_argument,       NULL, 'B' },
     { "timeout",        required_argument, NULL, 'T' },
@@ -737,6 +740,9 @@ static int parse_args(struct config *cfg, char **url, struct http_parser_url *pa
                 break;
             case 'L':
                 cfg->latency = true;
+                break;
+            case 'N':
+                cfg->no_keepalive = true;
                 break;
             case 'B':
                 cfg->record_all_responses = false;
